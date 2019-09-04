@@ -17,7 +17,7 @@
     "upmod": "cli.js"
   },
   "scripts": {
-    "test": "node cli.js -h"
+    "test": "node index"
   },
   "dependencies": {
     "archiver": "^3.1.1",
