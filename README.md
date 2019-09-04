@@ -1,5 +1,5 @@
 # UpMod :package:
-[![](https://img.shields.io/npm/v/upmod.svg)](https://www.npmjs.com/package/upmod) [![](https://travis-ci.com/jaliborc/upmod.svg)](https://travis-ci.com/Jaliborc/upmod/) ![](https://david-dm.org/jaliborc/upmod.svg) ![](https://img.shields.io/npm/l/upmod.svg)
+[![](https://img.shields.io/npm/v/upmod.svg)](https://www.npmjs.com/package/upmod) [![](https://github.com/jaliborc/upmod/workflows/build/badge.svg)](https://travis-ci.com/Jaliborc/upmod/) ![](https://david-dm.org/jaliborc/upmod.svg) ![](https://img.shields.io/npm/l/upmod.svg)
 
 Builds and uploads World of Warcraft addons to CurseForge. It supports the following features:
 * Build and upload of `.zip` files using a curseforge API key
@@ -30,4 +30,4 @@ const upmod = require('upmod')
 
 let build = upmod.make(data)
 let result = upmod.upload(build)
-``` 
+```
