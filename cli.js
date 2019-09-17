@@ -16,7 +16,7 @@ const savepath = path.join(require('os').homedir(), '.upmod')
 const settings = _.map([
   {
     name: 'dir',
-    message: 'Mod install directory',
+    message: 'WoW install directory',
     filter: normalize,
     validate: async dir => {
       let s = await fs.stat(dir).catch(()=>{})
@@ -24,15 +24,14 @@ const settings = _.map([
     },
   },
   {
-    name: 'toc',
-    message: 'Game toc number',
-    validate: toc => parseInt(toc) && true || 'Not a number',
-  },
-  {
     name: 'patches',
-    message: 'Supported game patches',
-    filter: patches => _.map(patches.split(','), p => p.trim()),
-    validate: patches => _.every(patches, p => p.match(/^\d+\.\d+\.\d+$/)) || 'Not in X.X.X, X.X.X format',
+    message: 'Supported game patch and toc number pairs',
+    filter: patches => _.map(patches.split(','), p => {
+      let pattern = p.trim().match(/^(\d+\.\d+\.\d+)[\/\\](\d+)$/)
+      return pattern && {name: pattern[1], id: pattern[2]}
+    }),
+    transformer: patches => typeof(patches) != 'string' && _.every(patches) && _.map(patches, p => p.name + '/' + p.id).join(', ') || patches,
+    validate: patches => _.every(patches) || 'Not in P.P.P/TOC, P.P.P/TOC format',
   },
   {
     name: 'curse',
@@ -116,7 +115,7 @@ async function run() {
           .then(build => {
             sucess(chalk`Built {cyan ${id}} version ${build.version}\n`)
             system.upload(Object.assign({project: id}, build, config))
-              .then(r => sucess(chalk`Uploaded {cyan ${id}} version ${build.version}`))
+              .then(r => sucess(chalk`Uploaded {cyan ${id}} version ${build.version} (${r.length} branches)`))
               .catch(error)
           })
           .catch(error)
