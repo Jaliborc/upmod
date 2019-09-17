@@ -17,6 +17,14 @@ jobs:
           node-version: 12
       - run: npm ci
       - run: npm test
+      
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: butlerlogic/action-autotag@master
+      with:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
   publish-npm:
     needs: build
@@ -44,12 +52,3 @@ jobs:
   #    - run: npm publish
   #      env:
   #        NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-
-  #tag:
-  #  needs: publish-npm
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #  - uses: actions/checkout@v1
-  #  - uses: butlerLogic/action-autotag@1.0.2
-  #    with:
-  #      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
