@@ -22,9 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: butlerlogic/action-autotag@master
-      with:
-        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+   - uses: jaliborc/action-general-autotag@master
+          with:
+            GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+            source_file: "package.json"
+            extraction_regex: "\\"version\\"\\s*:\\s*([\\d\\.]+)"
 
   publish-npm:
     needs: build
