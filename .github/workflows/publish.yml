@@ -25,8 +25,8 @@ jobs:
       - uses: jaliborc/action-general-autotag@master
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          source_file: "package.json"
-          extraction_regex: "\\"version\\"\\s*:\\s*([\\d\\.]+)"
+          source_file: "package.js"
+          extraction_regex: "version[^:]+:\\s*([\\d\\.]+)"
 
   publish-npm:
     needs: build
