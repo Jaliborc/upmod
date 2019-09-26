@@ -3,9 +3,11 @@
 
 Builds and uploads World of Warcraft addons to CurseForge. It supports the following features:
 * Build and upload of `.zip` files using a curseforge API key
-* `.gitignore` style ignore for upload (called `.upignore`)
-    * `.lua` and `.xml` files will be replaced by the simplest file the game client will accept without crashing
-* Version name detection from changelogs
+* Project configuration in single `.upconfig` file
+  * Supports multiple modules
+  * Supports `.gitignore` style ignore for upload
+  * Ignored `.lua` and `.xml` files will be replaced by the simplest file the game client will accept without crashing
+* Version name detection from `Changelod.md`
     * Automatic `.toc` version update
 * `.toc` title color removal, without changing source code (so you can highlight your mods ingame in awful colors locally, without harming users eyeballs)
 * Automatic patron list generation into any chosen `.lua` variable

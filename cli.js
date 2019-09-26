@@ -5,13 +5,14 @@ const system = require('./index')
 
 const commander = require('commander')
 const inquirer = require('inquirer')
+const figures = require('figures')
 const chalk = require('chalk')
 
 const csv = require('csv-parse/lib/sync')
 const fs = require('fs-extra')
 const path = require('path')
 
-const config = {mods: {}}
+const config = {}
 const savepath = path.join(require('os').homedir(), '.upmod')
 const settings = _.map([
   {
@@ -64,31 +65,13 @@ async function run() {
 
   commander
     .command('list')
-    .description('display registered addons')
+    .description('display found addons')
     .action( () => {
-      print(chalk`{bold {green ℹ} Registered Mods:}`)
-      for (let id of _.keys(config.mods).sort())
-        print(chalk`\n❯ {cyan ${id}} {gray ─ ${config.mods[id].length} folders}`)
-    })
+      for (let install of system.list(config.dir)) {
+        print(chalk`{bold {green ℹ} Under ${install.name}:}\n`)
 
-  commander
-    .command('add <modname> <folders...>')
-    .description('register addon as a set of folders')
-    .action( (mod, folders) => {
-      config.mods[mod] = _.map(folders, f => path.basename(normalize(f)))
-      sucess(chalk`Registered {cyan ${mod}} {gray ─ ${folders.length} folders}`)
-      save()
-    })
-
-  commander
-    .command('del <modname>')
-    .description('remove given addon from the registry')
-    .action( mod => {
-      let id = find(mod)
-      if (id) {
-        delete config.mods[id]
-        print(chalk`Unregistered {cyan ${id}}`)
-        save()
+        for (let mod of install.mods.sort())
+          print(chalk`❯ {cyan ${mod.name}}\n`)
       }
     })
 
@@ -97,10 +80,10 @@ async function run() {
     .description('build .zip file in desktop')
     .option('-p, --patch', 'name new patch build automatically')
     .action( (mod, options) => {
-      let id = find(mod)
-      if (id)
-        system.make(Object.assign({name: id, folders: config.mods[id], changes: options.patch && patchLog}, config))
-          .then(build => sucess(chalk`Built {cyan ${id}} version ${build.version}`))
+      let project = find(mod)
+      if (project)
+        system.make(Object.assign({changes: options.patch && autoPatch}, project, config))
+          .then(build => sucess(chalk`Built {cyan ${project.name}} version ${build.version}`))
           .catch(error)
     })
 
@@ -109,13 +92,13 @@ async function run() {
     .description('build and upload given addon to curse')
     .option('-p, --patch', 'name new patch build automatically')
     .action( (mod, options) => {
-      let id = find(mod)
-      if (id)
-        system.make(Object.assign({name: id, folders: config.mods[id], changes: options.patch && patchLog}, config))
+      let project = find(mod)
+      if (project)
+        system.make(Object.assign({changes: options.patch && autoPatch}, project, config))
           .then(build => {
-            sucess(chalk`Built {cyan ${id}} version ${build.version}\n`)
-            system.upload(Object.assign({project: id}, build, config))
-              .then(r => sucess(chalk`Uploaded {cyan ${id}} version ${build.version} (${r.length} branches)`))
+            sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
+            system.upload(Object.assign(build, config))
+              .then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version} (${r.length} branches)`))
               .catch(error)
           })
           .catch(error)
@@ -151,15 +134,12 @@ async function save() {
 /* Util */
 
 function find(mod) {
-  let id
-  for (let entry in config.mods)
-    if (clean(entry) == clean(mod))
-      id = entry
-
-  if (!id)
+  let mods = _.flatten(_.map(system.list(config.dir), i => i.mods))
+  let match = _.find(mods, entry => clean(entry.name) == clean(mod))
+  if (!match)
     error(chalk`{cyan ${mod}} is not registered.`)
 
-  return id
+  return match
 }
 
 function clean(mod) {
@@ -170,8 +150,8 @@ function normalize(file) {
   return path.normalize(file.trim().replace(/"/g, ''))
 }
 
-function patchLog(txt) {
-  return `##### ${config.patch}\n* Updated for World of Warcraft patch ${config.patch}.\n\n` + txt
+function autoPatch(txt) {
+  return `##### ${config.patches[0].name}\n* Updated for World of Warcraft patch ${config.patches[0].name}.\n\n` + txt
 }
 
 function sucess(txt) {
@@ -183,7 +163,7 @@ function error(txt) {
 }
 
 function print(text) {
-  process.stdout.write(require('figures')(text))
+  process.stdout.write(figures(text))
 }
 
 run()

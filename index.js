@@ -10,9 +10,44 @@ const fs = require('fs-extra')
 const path = require('path')
 const os = require('os')
 
-async function make(options) {
+function list(dir) {
+  return _
+    .chain(fs.readdirSync(dir, {withFileTypes: true}))
+    .each(i => i.path = path.join(dir, i.name, 'Interface', 'Addons'))
+    .filter(i => i.name.match(/^_.+_$/) && check(i.path))
+    .each(i => i.mods = _
+      .chain(fs.readdirSync(i.path))
+      .filter(mod => check(path.join(i.path, mod, '.upconfig')))
+      .map(mod => ({name: mod, path: path.join(i.path, mod)}))
+      .value()
+    )
+    .value()
+}
+
+async function make(params) {
+  let upconfig = readconfig(path.join(params.path, '.upconfig'))
+  let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
+  let id = upconfig.project && _.find(upconfig.project)
+
+  let folders = _.concat(_.map(upconfig.modules, m => path.join(params.path, '../', m)), params.path)
+  for (var folder of folders)
+    if (!check(folder))
+      throw chalk`Missing a required module at {red ${folder}}`
+
+
+  let logfile = path.join(params.path, 'Changelog.md')
+  if (!check(logfile))
+    throw chalk`No {red Changelog.md} found`
+
+  let log = (params.changes || (l => l))(read(logfile))
+  let name = log.match(/^[^\n\r\d]*(\d+(?:\.\d+)?(?:\.\d+)?)(?:\s*\((beta)\))?/)
+  if (!name)
+    throw chalk`Invalid {red Changelog.md} format`
+
+  let year = (new Date()).getFullYear()
+  let version = name[1], type = name[2] || 'release'
   let patrons = _
-    .chain(options.patrons || []).each(parsePatron)
+    .chain(params.patrons || []).each(parsePatron)
     .filter(p => p['Patron Status'] == 'Active patron' && p.Tier != '' && p.Lifetime > 0 && p.Pledge >= 5)
     .sortBy('Lifetime').reverse()
     .groupBy('Tier').toPairs()
@@ -20,35 +55,19 @@ async function make(options) {
     .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},{},', '')
     .value().slice(0,-4)
 
-  let installs = fs.readdirSync(options.dir, { withFileTypes: true })
-    .filter(install => install.isDirectory() && install.name.match(/^_.+_$/))
-    .map(install => path.join(options.dir, install.name))
-
-  let folders = _.map(options.folders, f => _.find(_.map(installs, i => path.join(i, 'Interface/Addons', f)), check))
-  let logfile = _.find(await _.map(folders, f => check(path.join(f, 'Changelog.md'))))
-  if (!logfile)
-    throw chalk`No {red Changelog.md} found`
-
-  let log = (options.changes || (l => l))(read(logfile))
-  let name = log.match(/^[^\n\r\d]*(\d+(?:\.\d+)?(?:\.\d+)?)(?:\s*\((beta)\))?/)
-  if (!name)
-    throw chalk`Invalid {red Changelog.md} format`
-
-  let year = (new Date()).getFullYear()
-  let version = name[1], type = name[2] || 'release'
-  let builds = await b.map(options.patches, async patch => {
-    let out = path.join(os.homedir(), 'Desktop', `${options.name}-${version}-${patch.name}.zip`)
+  let builds = await b.map(params.patches, async patch => {
+    let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}-${patch.name}.zip`)
     let zip = archiver('zip')
 
     await fs.writeFile(logfile, log, 'utf8')
     await zip.pipe(fs.createWriteStream(out))
     await b.each(folders, async folder => {
-       let ignore = require('ignore')().add(read(path.join(folder, '.upignore')) || '')
        let files = _.map(klaw(folder), i => i.path)
+       let dir = path.join(folder, '../')
 
        await b.each(files, async file => {
          let ext = path.extname(file)
-         let fout = {name: path.relative(options.dir, file)}
+         let fout = {name: path.relative(dir, file)}
          let ignored = ignore.ignores(path.relative(folder, file))
 
          if (ext == '.lua') {
@@ -70,7 +89,28 @@ async function make(options) {
     return {path: out, patch: patch}
   }, {concurrency: 1})
 
-  return {version: version, type: type, log: log, builds: builds}
+  return {project: id, version: version, type: type, log: log, builds: builds}
+}
+
+function readconfig(file) {
+  let text = read(file)
+  let data = {}
+
+  if (text) {
+    let key
+
+    for (let line of text.split('\n')) {
+      let v = line.match(/^\s*\[(\w+)\]\s*$/)
+      if (v) {
+        key = v[1]
+        data[key] = []
+      } else if (key) {
+        data[key].push(line.trim())
+      }
+    }
+  }
+
+  return data
 }
 
 function check(file) {
@@ -94,28 +134,23 @@ function parseDollars(entry, key) {
   entry[key] = parseInt(entry[key + ' $'].match(/\d+/)[0])
 }
 
-async function upload(options) {
-  let page = await request.get(`https://wow.curseforge.com/projects/${options.project}`)
-  let project = page.match(/<span>Project ID<\/span>\s*<span>(\d+)<\/span>/)
-  if (!project)
-    throw chalk`Project ${options.project} does not exist`
-
-  let headers =  {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': options.curse}
+async function upload(params) {
+  let headers =  {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
   let patches = await request.get({url: 'https://wow.curseforge.com/api/game/versions', headers: headers, json: true})
-  let compatible = _.filter(patches, p => _.some(options.builds || [], b => b.patch.name == p.name))
-  if (compatible.length < options.builds.length)
+  let compatible = _.filter(patches, p => _.some(params.builds || [], b => b.patch.name == p.name))
+  if (compatible.length < params.builds.length)
     throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-  return await b.map(options.builds, async build =>
+  return await b.map(params.builds, async build =>
     await request.post({
-      url:`https://wow.curseforge.com/api/projects/${project[1]}/upload-file`,
+      url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
       headers: headers,
       formData: {
         file: fs.createReadStream(build.path),
         metadata : JSON.stringify({
-          displayName: options.version,
-          releaseType: options.type,
-          changelog: options.log,
+          displayName: params.version,
+          releaseType: params.type,
+          changelog: params.log,
           gameVersions: [_.find(patches, p => p.name == build.patch.name).id],
           changelogType: 'markdown',
         })
@@ -124,4 +159,4 @@ async function upload(options) {
   )
 }
 
-module.exports = {make: make, upload: upload}
+module.exports = {list: list, make: make, upload: upload}
