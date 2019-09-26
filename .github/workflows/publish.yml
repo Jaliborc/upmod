@@ -25,7 +25,7 @@ jobs:
       - uses: jaliborc/action-general-autotag@master
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          source_file: "package.js"
+          source_file: "package.json"
           extraction_regex: "version[^:]+:\\s*([\\d\\.]+)"
 
   publish-npm:
@@ -41,16 +41,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
 
-  #publish-gpr:
-  #  needs: build
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - uses: actions/checkout@v1
-  #    - uses: actions/setup-node@v1
-  #      with:
-  #        node-version: 12
-  #        registry-url: https://npm.pkg.github.com/
-  #        scope: '@your-github-username'
-  #    - run: npm publish
-  #      env:
-  #        NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  publish-gpr:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://npm.pkg.github.com/
+          scope: '@jaliborc'
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
