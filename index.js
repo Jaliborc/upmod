@@ -26,6 +26,7 @@ function list(dir) {
 
 async function make(params) {
   let upconfig = readconfig(path.join(params.path, '.upconfig'))
+  let incompatible = upconfig.incompatible ? upconfig.incompatible.map(i => i.replace(/x/g, '\\d+')) : []
   let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
   let id = upconfig.project && _.find(upconfig.project)
 
@@ -33,7 +34,6 @@ async function make(params) {
   for (var folder of folders)
     if (!check(folder))
       throw chalk`Missing a required module at {red ${folder}}`
-
 
   let logfile = path.join(params.path, 'Changelog.md')
   if (!check(logfile))
@@ -46,6 +46,7 @@ async function make(params) {
 
   let year = (new Date()).getFullYear()
   let version = name[1], type = name[2] || 'release'
+  let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
   let patrons = _
     .chain(params.patrons || []).each(parsePatron)
     .filter(p => p['Patron Status'] == 'Active patron' && p.Tier != '' && p.Lifetime > 0 && p.Pledge >= 5)
@@ -55,7 +56,7 @@ async function make(params) {
     .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},{},', '')
     .value().slice(0,-4)
 
-  let builds = await b.map(params.patches, async patch => {
+  let builds = await b.map(patches, async patch => {
     let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}-${patch.name}.zip`)
     let zip = archiver('zip')
 
