@@ -15,7 +15,7 @@
   },
   "bin": {
     "upmod": "cli.js"
-  },
+  }, 
   "scripts": {
     "test": "node index"
   },
