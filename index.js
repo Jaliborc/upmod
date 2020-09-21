@@ -132,7 +132,7 @@ function parsePatron(entry, key) {
 }
 
 function parseDollars(entry, key) {
-  entry[key] = parseInt(entry[key + ' $'].match(/\d+/)[0])
+  entry[key] = parseInt(entry[key + ' Amount'].match(/\d+/)[0])
 }
 
 async function upload(params) {
