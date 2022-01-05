@@ -113,7 +113,7 @@ async function configuration() {
     type: 'list',
     message: 'Choose setting to modify',
     choices: _.map(settings,
-      s => ({value: s.name, name: chalk`${s.message} {gray ─ ${s.transformer(config[s.name])}}`})
+      s => ({value: s.name, name: chalk`${s.message} {yellow ─ ${s.transformer(config[s.name])}}`})
     ),
   }])
 
