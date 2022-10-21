@@ -80,7 +80,7 @@ async function make(params) {
          } else if (ext == '.toc') {
            await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
            await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.id}`})
-           if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}([^|]+)\|r/, '$1$2'), fout)
+           if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
          } else if (ext == '.tga') {
            if (!ignored) zip.append(fs.createReadStream(file), fout)
          }
