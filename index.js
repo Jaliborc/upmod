@@ -57,7 +57,7 @@ async function make(params) {
     .value().slice(0,-4)
 
   let builds = await b.mapSeries(patches, async patch => {
-    let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}-${patch.name}.zip`)
+    let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version} for WoW-${patch.name}.zip`)
     let zip = archiver('zip')
 
     await fs.writeFile(logfile, log, 'utf8')
