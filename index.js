@@ -49,12 +49,12 @@ async function make(params) {
   let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
   let patrons = _
     .chain(params.patrons || []).each(parsePatron)
-    .filter(p => p['Patron Status'] == 'Active patron' && p.Tier != '' && p.Lifetime > 0 && p.Pledge >= 5)
+    .filter(p => p['Patron Status'] == 'Active patron' && p.Tier != 'Mankrik\'s Wife' && p.Lifetime > 0 && p.Pledge >= 5)
     .sortBy('Lifetime').reverse()
     .groupBy('Tier').toPairs()
     .sortBy(tier => _.meanBy(tier[1], 'Pledge')).reverse()
-    .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},{},', '')
-    .value().slice(0,-4)
+    .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},', '')
+    .value().slice(0,-1)
 
   let builds = await b.mapSeries(patches, async patch => {
     let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version} for WoW-${patch.name}.zip`)
@@ -72,7 +72,7 @@ async function make(params) {
          let ignored = ignore.ignores(path.relative(folder, file))
 
          if (ext == '.lua') {
-           await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{${patrons}} $2`})
+           await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
            await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
            zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
          } else if (ext == '.xml') {
@@ -123,7 +123,7 @@ function read(file) {
 }
 
 function capitalize(text) {
-  return text.split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1)).join(' ')
+  return text.split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1).toLowerCase()).join(' ').substring(0, 18)
 }
 
 function parsePatron(entry, key) {
