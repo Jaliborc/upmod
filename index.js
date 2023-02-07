@@ -49,7 +49,7 @@ async function make(params) {
   let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
   let patrons = _
     .chain(params.patrons || []).each(parsePatron)
-    .filter(p => p['Patron Status'] == 'Active patron' && p.Tier != 'Mankrik\'s Wife' && p.Lifetime > 0 && p.Pledge >= 5)
+    .filter(p => p['Patron Status'] == 'Active patron' && p.Tier && p.Tier != 'Mankrik\'s Wife' && p.Lifetime > 0 && p.Pledge >= 5)
     .sortBy('Lifetime').reverse()
     .groupBy('Tier').toPairs()
     .sortBy(tier => _.meanBy(tier[1], 'Pledge')).reverse()
@@ -67,23 +67,25 @@ async function make(params) {
        let dir = path.join(folder, '../')
 
        await b.each(files, async file => {
-         let ext = path.extname(file)
-         let fout = {name: path.relative(dir, file)}
-         let ignored = ignore.ignores(path.relative(folder, file))
+        if (!/\\\./g.test(file)) {
+          let ext = path.extname(file)
+          let fout = {name: path.relative(dir, file)}
+          let ignored = ignore.ignores(path.relative(dir, file))
 
-         if (ext == '.lua') {
-           await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
-           await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
-           zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
-         } else if (ext == '.xml') {
-           zip.append(ignored && '<Ui></Ui>' || fs.createReadStream(file), fout)
-         } else if (ext == '.toc') {
-           await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
-           await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.id}`})
-           if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
-         } else if (ext == '.tga') {
-           if (!ignored) zip.append(fs.createReadStream(file), fout)
-         }
+          if (ext == '.lua') {
+            await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
+            await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
+            zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
+          } else if (ext == '.xml') {
+            zip.append(ignored && '<Ui></Ui>' || fs.createReadStream(file), fout)
+          } else if (ext == '.toc') {
+            await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
+            await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.id}`})
+            if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
+          } else if (ext == '.tga') {
+            if (!ignored) zip.append(fs.createReadStream(file), fout)
+          }
+        }
        })
     }).then(() => zip.finalize())
 
@@ -123,7 +125,7 @@ function read(file) {
 }
 
 function capitalize(text) {
-  return text.split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1).toLowerCase()).join(' ').substring(0, 18)
+  return text.split(' ').map(s => s.charAt(0).toUpperCase() + s.substring(1).toLowerCase()).join(' ').substring(0, 17).replace(/'/g, "\\'")
 }
 
 function parsePatron(entry, key) {
