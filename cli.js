@@ -28,11 +28,11 @@ const settings = _.map([
     name: 'patches',
     message: 'Supported game patch and toc number pairs',
     filter: patches => _.map(patches.split(','), p => {
-      let pattern = p.trim().match(/^(\d+\.\d+\.\d+)[\/\\](\d+)$/)
-      return pattern && {name: pattern[1], id: pattern[2]}
+      let pattern = p.trim().match(/^(\w+)[\/\\](\d+\.\d+\.\d+)[\/\\](\d+)$/)
+      return pattern && {flavor: pattern[1], name: pattern[2], toc: pattern[3]}
     }),
-    transformer: patches => typeof(patches) != 'string' && _.every(patches) && _.map(patches, p => p.name + '/' + p.id).join(', ') || patches,
-    validate: patches => _.every(patches) || 'Not in P.P.P/TOC, P.P.P/TOC format',
+    transformer: patches => typeof(patches) != 'string' && _.every(patches) && _.map(patches, p => p.flavor + '/' + p.name + '/' + p.toc).join(', ') || patches,
+    validate: patches => _.every(patches) || 'Not in Flavor/X.X.X/TOC, Flavor/X.X.X/TOC format',
   },
   {
     name: 'curse',
@@ -98,7 +98,7 @@ async function run() {
           .then(build => {
             sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
             system.upload(Object.assign(build, config))
-              .then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version} (${r.length} branches)`))
+              .then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
               .catch(error)
           })
           .catch(error)

@@ -46,7 +46,6 @@ async function make(params) {
 
   let year = (new Date()).getFullYear()
   let version = name[1], type = name[2] || 'release'
-  let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
   let patrons = _
     .chain(params.patrons || []).each(parsePatron)
     .filter(p => p['Patron Status'] == 'Active patron' && p.Tier && p.Tier != 'Mankrik\'s Wife' && p.Lifetime > 0 && p.Pledge >= 5)
@@ -56,43 +55,44 @@ async function make(params) {
     .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},', '')
     .value().slice(0,-1)
 
-  let builds = await b.mapSeries(patches, async patch => {
-    let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version} for WoW-${patch.name}.zip`)
-    let zip = archiver('zip')
+  let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
+  let files = _.flatMap(folders, folder => _.map(klaw(folder), i => i.path)).filter(file => !/\\\./g.test(file))
+  let dir = path.join(params.path, '../')
 
-    await fs.writeFile(logfile, log, 'utf8')
-    await zip.pipe(fs.createWriteStream(out))
-    await b.each(folders, async folder => {
-       let files = _.map(klaw(folder), i => i.path)
-       let dir = path.join(folder, '../')
-
-       await b.each(files, async file => {
-        if (!/\\\./g.test(file)) {
-          let ext = path.extname(file)
-          let fout = {name: path.relative(dir, file)}
-          let ignored = ignore.ignores(path.relative(dir, file))
-
-          if (ext == '.lua') {
-            await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
-            await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
-            zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
-          } else if (ext == '.xml') {
-            zip.append(ignored && '<Ui></Ui>' || fs.createReadStream(file), fout)
-          } else if (ext == '.toc') {
-            await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
-            await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.id}`})
-            if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
-          } else if (ext == '.tga') {
-            if (!ignored) zip.append(fs.createReadStream(file), fout)
-          }
-        }
-       })
-    }).then(() => zip.finalize())
-
-    return {path: out, patch: patch}
+  await fs.writeFile(logfile, log, 'utf8')
+  await b.each(files, async file => {
+    if (file.endsWith('.lua')) {
+      await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
+      await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
+    } else if (file.endsWith('.toc')) {
+      let patch = patches.find(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
+      if (patch)
+        await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.toc}`})
+      await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
+    }
   })
+  
+  let zip = archiver('zip')
+  let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
 
-  return {project: id, version: version, type: type, log: log, builds: builds}
+  await zip.pipe(fs.createWriteStream(out))
+  await b.each(files, async file => {
+    let ext = path.extname(file)
+    let fout = {name: path.relative(dir, file)}
+    let ignored = ignore.ignores(path.relative(dir, file))
+
+    if (ext == '.lua') {
+      zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
+    } else if (ext == '.xml') {
+      zip.append(ignored && '<Ui></Ui>' || fs.createReadStream(file), fout)
+    } else if (ext == '.toc') {
+      if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
+    } else if (ext == '.tga' || ext == '.mp3') {
+      if (!ignored) zip.append(fs.createReadStream(file), fout)
+    }
+  }).then(() => zip.finalize())
+
+  return {project: id, version: version, patches: patches, type: type, log: log, path: out}
 }
 
 function readconfig(file) {
@@ -139,27 +139,25 @@ function parseDollars(entry, key) {
 
 async function upload(params) {
   let headers =  {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-  let patches = await request.get({url: 'https://wow.curseforge.com/api/game/versions', headers: headers, json: true})
-  let compatible = _.filter(patches, p => _.some(params.builds || [], b => b.patch.name == p.name))
-  if (compatible.length < params.builds.length)
+  let clients = await request.get({url: 'https://wow.curseforge.com/api/game/versions', headers: headers, json: true})
+  let compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
+  if (compatible.length < params.patches.length)
     throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-  return await b.map(params.builds, async build =>
-    await request.post({
-      url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
-      headers: headers,
-      formData: {
-        file: fs.createReadStream(build.path),
-        metadata : JSON.stringify({
-          displayName: params.version,
-          releaseType: params.type,
-          changelog: params.log,
-          gameVersions: [_.find(patches, p => p.name == build.patch.name).id],
-          changelogType: 'markdown',
-        })
-      }
-    })
-  )
+  return await request.post({
+    url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
+    headers: headers,
+    formData: {
+      file: fs.createReadStream(params.path),
+      metadata : JSON.stringify({
+        gameVersions: _.map(compatible, 'id'),
+        displayName: params.version,
+        releaseType: params.type,
+        changelog: params.log,
+        changelogType: 'markdown',
+      })
+    }
+  })
 }
 
 module.exports = {list: list, make: make, upload: upload}
