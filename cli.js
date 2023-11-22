@@ -97,7 +97,7 @@ async function run() {
         system.make(Object.assign({changes: options.patch && autoPatch}, project, config))
           .then(build => {
             sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
-            system.upload(Object.assign(build, config))
+            system.upload(Object.assign(config, build))
               .then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
               .catch(error)
           })

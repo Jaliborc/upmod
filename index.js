@@ -62,7 +62,7 @@ async function make(params) {
   await fs.writeFile(logfile, log, 'utf8')
   await b.each(files, async file => {
     if (file.endsWith('.lua')) {
-      await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{{},${patrons}} $2`})
+      await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{${patrons}} $2`})
       await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
     } else if (file.endsWith('.toc')) {
       let patch = patches.find(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
