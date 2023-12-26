@@ -71,7 +71,7 @@ async function make(params) {
       await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
     }
   })
-  
+
   let zip = archiver('zip')
   let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
 
@@ -85,10 +85,16 @@ async function make(params) {
       zip.append(ignored && 'if true then return end' || fs.createReadStream(file), fout)
     } else if (ext == '.xml') {
       zip.append(ignored && '<Ui></Ui>' || fs.createReadStream(file), fout)
-    } else if (ext == '.toc') {
-      if (!ignored) zip.append(fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3'), fout)
     } else if (ext == '.tga' || ext == '.mp3') {
       if (!ignored) zip.append(fs.createReadStream(file), fout)
+    } else if (ext == '.toc') {
+      if (!ignored) {
+        let toc = fs.readFileSync(file, 'utf8').replace(/(##\s*Title:\s*)\|c\w{8}(.+)\|r\s*(\r\n?|\n)/, '$1$2$3')
+        if (type == 'release')
+          toc = toc.replace(/^## X-Development:.*(\r?\n|\r)/gm, '')
+
+        zip.append(toc, fout)
+      }
     }
   }).then(() => zip.finalize())
 
