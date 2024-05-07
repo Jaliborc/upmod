@@ -67,7 +67,7 @@ async function make(params) {
     } else if (file.endsWith('.toc')) {
       let patch = patches.find(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
       if (patch)
-        await fsreplace({files: file, from: /(##\s*Interface:\s*)\d+/, to: `$1${patch.toc}`})
+        await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${patch.toc}`})
       await fsreplace({files: file, from: /(##\s*Version:\s*)[\.\d]+/, to: `$1${version}`})
     }
   })
