@@ -26,7 +26,7 @@ function list(dir) {
 
 async function make(params) {
   let upconfig = readconfig(path.join(params.path, '.upconfig'))
-  let incompatible = upconfig.incompatible ? upconfig.incompatible.filter(i => i.length > 0).map(i => i.replace(/x/g, '\\d+')) : []
+  let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
   let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
   let id = upconfig.project && _.find(upconfig.project)
 
@@ -150,7 +150,7 @@ async function upload(params) {
   if (compatible.length < params.patches.length)
     throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-  return await request.post({
+  /*return await request.post({
     url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
     headers: headers,
     formData: {
@@ -163,7 +163,7 @@ async function upload(params) {
         changelogType: 'markdown',
       })
     }
-  })
+  })*/
 }
 
 module.exports = {list: list, make: make, upload: upload}
