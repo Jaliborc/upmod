@@ -150,7 +150,7 @@ async function upload(params) {
   if (compatible.length < params.patches.length)
     throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-  /*return await request.post({
+  return await request.post({
     url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
     headers: headers,
     formData: {
@@ -163,7 +163,7 @@ async function upload(params) {
         changelogType: 'markdown',
       })
     }
-  })*/
+  })
 }
 
 module.exports = {list: list, make: make, upload: upload}
