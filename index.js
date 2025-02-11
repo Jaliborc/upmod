@@ -1,3 +1,6 @@
+const process = require('process')
+process.removeAllListeners('warning')
+
 const _ = require('lodash')
 const b = require('bluebird')
 const chalk = require('chalk')
