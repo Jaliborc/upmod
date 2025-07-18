@@ -29,10 +29,6 @@ function list(dir) {
 
 async function make(params) {
   let upconfig = readconfig(path.join(params.path, '.upconfig'))
-  let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
-  let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
-  let id = upconfig.project && _.find(upconfig.project)
-
   let folders = _.concat(_.map(upconfig.modules || [], m => path.join(params.path, '../', m)), params.path)
   for (var folder of folders)
     if (!check(folder))
@@ -58,7 +54,10 @@ async function make(params) {
     .reduce((t, tier) => t + `{title='${tier[0]}',people={` + _.reduce(tier[1], (t, p) => t + `'${capitalize(p.Name)}',`, '').slice(0,-1) + '}},', '')
     .value().slice(0,-1)
 
+  let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
   let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
+  let tocs = _.map(patches, 'toc').join(', ')
+
   let files = _.flatMap(folders, folder => _.map(klaw(folder), i => i.path)).filter(file => !/\\\./g.test(file))
   let dir = path.join(params.path, '../')
 
@@ -71,12 +70,16 @@ async function make(params) {
       let patch = patches.find(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
       if (patch)
         await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${patch.toc}`})
+      else
+        await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${tocs}`})
+
       await fsreplace({files: file, from: /(##\s*Version:\s*).*$/m, to: `$1${version}${type !== 'release' ? ' ('+type+')' : ''}`})
     }
   })
 
   let zip = archiver('zip')
   let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
+  let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
 
   await zip.pipe(fs.createWriteStream(out))
   await b.each(files, async file => {
@@ -101,6 +104,7 @@ async function make(params) {
     }
   }).then(() => zip.finalize())
 
+  let id = upconfig.project && _.find(upconfig.project)
   return {project: id, version: version, patches: patches, type: type, log: log, path: out}
 }
 
