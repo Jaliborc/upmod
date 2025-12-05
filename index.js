@@ -56,7 +56,6 @@ async function make(params) {
 
   let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
   let patches = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
-  let tocs = _.map(patches, 'toc').join(', ')
 
   let files = _.flatMap(folders, folder => _.map(klaw(folder), i => i.path)).filter(file => !/\\\./g.test(file))
   let dir = path.join(params.path, '../')
@@ -67,12 +66,10 @@ async function make(params) {
       await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{${patrons}} $2`})
       await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
     } else if (file.endsWith('.toc')) {
-      let patch = patches.find(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
-      if (patch)
-        await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${patch.toc}`})
-      else
-        await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${tocs}`})
+      let matches = patches.filter(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
+      matches = matches.length > 0 ? matches : patches
 
+      await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${_.map(matches, 'toc').join(', ')}`})
       await fsreplace({files: file, from: /(##\s*Version:\s*).*$/m, to: `$1${version}${type !== 'release' ? ' ('+type+')' : ''}`})
     }
   })
