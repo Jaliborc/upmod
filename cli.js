@@ -78,8 +78,8 @@ async function run() {
 	commander
 		.command('make <modname>')
 		.description('build .zip file in desktop')
-		.option('-l, --changelog <message>', 'add text into the changelog to name the new build')
-		.option('-s, --silent', 'do not update submodules before building')
+		.option('-l, --log <message>', 'add text into the changelog to name the new build')
+		.option('-s, --stay', 'do not update submodules before building')
 		.action( (mod, options) => {
 			let project = find(mod)
 			if (project)
@@ -91,15 +91,15 @@ async function run() {
 	commander
 		.command('up <modname>')
 		.description('build and upload given addon to curse')
-		.option('-l, --changelog <message>', 'add text into the changelog to name the new build')
-		.option('-s, --silent', 'do not update submodules before building')
+		.option('-l, --log <message>', 'add text into the changelog to name the new build')
+		.option('-s, --stay', 'do not update submodules before building')
 		.action( (mod, options) => {
 			let project = find(mod)
 			if (project)
-				system.make(Object.assign(options, project, config))
+				system.make(Object.assign({}, config, project, options))
 					.then(build => {
 						sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
-						system.upload(Object.assign(config, build))
+						system.upload(Object.assign({}, config, project, build))
 							.then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
 							.catch(error)
 					})

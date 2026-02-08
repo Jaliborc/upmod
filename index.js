@@ -47,7 +47,7 @@ async function make(params) {
 	if (!exists(logfile))
 		throw chalk`No {red Changelog.md} found`
 
-	let changes = params.changelog?.replace(/\\|\/|\/n/g, '\n')
+	let changes = params.log?.replace(/\\|\/|\/n/g, '\n')
 	let log = changes ? `${changes}\n\n${read(logfile)}` : read(logfile)
 	if (changes)
 		await fs.writeFile(logfile, log, 'utf8')
@@ -90,10 +90,8 @@ async function make(params) {
 		}
 	})
 
-	if (!params.silent) {
+	if (!params.stay)
 		commitSubmodules(folders, 'Automated year/interface number update')
-		commitChanges(params.path, version)
-	}
 
 	let zip = archiver('zip')
 	let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
@@ -118,7 +116,7 @@ async function make(params) {
 	}).then(() => zip.finalize())
 
 	let id = upconfig.project && _.find(upconfig.project)
-	return {project: id, version: version, patches: compatible, type: type, log: log, path: out}
+	return {project: id, version: version, patches: compatible, type: type, log: log, file: out}
 }
 
 async function upload(params) {
@@ -128,11 +126,11 @@ async function upload(params) {
 	if (compatible.length < params.patches.length)
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-	return await request.post({
+	let published = await request.post({
 		url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
 		headers: headers,
 		formData: {
-		file: fs.createReadStream(params.path),
+		file: fs.createReadStream(params.file),
 		metadata : JSON.stringify({
 			gameVersions: _.map(compatible, 'id'),
 			displayName: params.version,
@@ -142,6 +140,10 @@ async function upload(params) {
 		})
 		}
 	})
+
+	if (published)
+		commitChanges(params.path, params.version)
+	return published
 }
 
 
