@@ -1,7 +1,7 @@
 const process = require('process')
 process.removeAllListeners('warning')
 
-const { execSync, spawnSync } = require('child_process')
+const { spawnSync } = require('child_process')
 const archiver = require('archiver')
 const klaw = require('klaw-sync')
 
@@ -172,9 +172,12 @@ function commitSubmodules(folders, message) {
 function commitChanges(repo, message) {
 	let status = spawnSync('git', ['status', '--porcelain'], {cwd: repo, encoding: 'utf8'})
 	if (status?.stdout?.trim().length > 0) {
-		execSync('git', ['add', '.'], {cwd: repo})
-		execSync('git', ['commit', '-m', message], {cwd: repo, stdio: 'inherit'})
-		execSync('git', ['push', 'origin'], {cwd: repo, stdio: 'inherit'})
+		console.log('add')
+		spawnSync('git', ['add', '.'], {cwd: repo})
+		console.log('commit')
+		spawnSync('git', ['commit', '-m', message], {cwd: repo, stdio: 'inherit'})
+		console.log('push')
+		spawnSync('git', ['push', 'origin'], {cwd: repo, stdio: 'inherit'})
 	}
 }
 
