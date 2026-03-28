@@ -10,7 +10,6 @@ const b = require('bluebird')
 const chalk = require('chalk')
 
 const fsreplace = require('replace-in-file')
-const request = require('request-promise')
 const fs = require('fs-extra')
 const path = require('path')
 const os = require('os')
@@ -120,29 +119,27 @@ async function make(params) {
 }
 
 async function upload(params) {
-	let headers =  {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-	let clients = await request.get({url: 'https://wow.curseforge.com/api/game/versions', headers: headers, json: true})
-	let compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
+	const headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
+	const clients = await (await fetch('https://wow.curseforge.com/api/game/versions', {headers})).json()
+
+	const compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
 	if (compatible.length < params.patches.length)
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-	let published = await request.post({
-		url:`https://wow.curseforge.com/api/projects/${params.project}/upload-file`,
-		headers: headers,
-		formData: {
-		file: fs.createReadStream(params.file),
-		metadata : JSON.stringify({
-			gameVersions: _.map(compatible, 'id'),
-			displayName: params.version,
-			releaseType: params.type,
-			changelog: params.log,
-			changelogType: 'markdown',
-		})
-		}
-	})
+	const body = new FormData()
+	body.append('file', fs.createReadStream(params.file), {filename: params.file})
+	body.append('metadata', JSON.stringify({
+		gameVersions: _.map(compatible, 'id'),
+		displayName: params.version,
+		releaseType: params.type,
+		changelog: params.log,
+		changelogType: 'markdown',
+	}))
 
+	const published = await (await fetch(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })).json()
 	if (published)
 		commitChanges(params.path, params.version)
+
 	return published
 }
 
