@@ -126,7 +126,7 @@ async function upload(params) {
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
 	const body = new FormData()
-	body.append('file', fs.createReadStream(params.file), {filename: params.file})
+	body.append('file', await fs.openAsBlob(params.file), params.file)
 	body.append('metadata', JSON.stringify({
 		gameVersions: _.map(compatible, 'id'),
 		displayName: params.version,
@@ -229,4 +229,4 @@ function parseDollars(entry, key) {
 	entry[key] = parseInt(entry[key + ' Amount'].match(/\d+/)[0])
 }
 
-module.exports = {list: list, make: make, upload: upload}
+module.exports = { list, make, upload }
