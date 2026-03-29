@@ -1,36 +1,24 @@
 {
 	"name": "upmod",
-	"version": "2.3.5",
 	"description": "World of Warcraft addon build and upload tool",
 	"author": "Joao Cardoso",
-	"license": "ISC",
+	"version": "2.4.0",
 	"main": "cli.js",
-	"homepage": "https://github.com/jaliborc/upmod",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/jaliborc/upmod.git"
-	},
-	"bugs": {
-		"url": "https://github.com/jaliborc/upmod/issues"
-	},
 	"bin": {
 		"upmod": "cli.js"
 	},
-	"scripts": {
-		"test": "node index"
-	},
 	"dependencies": {
-		"archiver": ">=7.0.1",
-		"bluebird": ">=3.7.2",
-		"chalk": ">=5.6.2",
-		"commander": ">=14.0.3",
-		"csv-parse": ">=6.2.1",
-		"figures": ">=6.1.0",
-		"fs-extra": ">=8.1.0",
-		"ignore": ">=7.0.5",
-		"inquirer": ">=8.2.0",
-		"klaw-sync": ">=6.0.0",
-		"lodash": ">=4.17.21",
-		"replace-in-file": ">=8.4.0"
+		"archiver": "^7.0.1",
+		"bluebird": "^3.7.2",
+		"chalk-template": "^1.1.2",
+		"commander": "^14.0.3",
+		"csv-parse": "^6.2.1",
+		"figures": "^6.1.0",
+		"fs-extra": "^8.1.0",
+		"ignore": "^7.0.5",
+		"inquirer": "^8.2.0",
+		"klaw-sync": "^7.0.0",
+		"lodash": "^4.17.21",
+		"replace-in-file": "^8.4.0"
 	}
 }

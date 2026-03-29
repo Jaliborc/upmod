@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-const _ = require('lodash')
-const system = require('./index')
+const { list, make, upload } = require('./index')
+const { replaceSymbols } = require('figures')
+const chalk = require('chalk-template').default
 
-const commander = require('commander')
+const { program } = require('commander')
+const csv = require('csv-parse/sync')
 const inquirer = require('inquirer')
-const figures = require('figures')
-const chalk = require('chalk')
 
-const csv = require('csv-parse/lib/sync')
 const fs = require('fs-extra')
 const path = require('path')
+const _ = require('lodash')
 
 const config = {}
 const savepath = path.join(require('os').homedir(), '.upmod')
@@ -56,18 +56,18 @@ async function run() {
 	Object.assign(config, await fs.readJson(savepath).catch(() => {}))
 	await configure(set => !config[set.name] && !set.optional)
 
-	commander
+	program
 		.command('config')
 		.description('change global settings')
 		.action( () => {
 			configuration()
 		})
 
-	commander
+	program
 		.command('list')
 		.description('display found addons')
 		.action( () => {
-			for (let install of system.list(config.dir)) {
+			for (let install of list(config.dir)) {
 				print(chalk`{bold {green ℹ} Under ${install.name}:}\n`)
 
 				for (let mod of install.mods.sort())
@@ -75,7 +75,7 @@ async function run() {
 			}
 		})
 
-	commander
+	program
 		.command('make <modname>')
 		.description('build .zip file in desktop')
 		.option('-l, --log <message>', 'add text into the changelog to name the new build')
@@ -83,12 +83,12 @@ async function run() {
 		.action( (mod, options) => {
 			let project = find(mod)
 			if (project)
-				system.make(Object.assign(options, project, config))
+				make(Object.assign(options, project, config))
 					.then(build => sucess(chalk`Built {cyan ${project.name}} version ${build.version}`))
 					.catch(error)
 		})
 
-	commander
+	program
 		.command('up <modname>')
 		.description('build and upload given addon to curse')
 		.option('-l, --log <message>', 'add text into the changelog to name the new build')
@@ -96,17 +96,17 @@ async function run() {
 		.action( (mod, options) => {
 			let project = find(mod)
 			if (project)
-				system.make(Object.assign({}, config, project, options))
+				make(Object.assign({}, config, project, options))
 					.then(build => {
 						sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
-						system.upload(Object.assign({}, config, project, build))
+						upload(Object.assign({}, config, project, build))
 							.then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
 							.catch(error)
 					})
 					.catch(error)
 		})
 
-	commander.version('2.0').parse(process.argv)
+	program.version('2.4').parse(process.argv)
 }
 
 async function configuration() {
@@ -136,7 +136,7 @@ async function save() {
 /* Util */
 
 function find(mod) {
-	let mods = _.flatten(_.map(system.list(config.dir), i => i.mods))
+	let mods = _.flatten(_.map(list(config.dir), i => i.mods))
 	let match = _.find(mods, entry => clean(entry.name) == clean(mod))
 	if (!match)
 		error(chalk`{cyan ${mod}} is not registered.`)
@@ -161,7 +161,7 @@ function error(txt) {
 }
 
 function print(text) {
-	process.stdout.write(figures(text))
+	process.stdout.write(replaceSymbols(text))
 }
 
 run()

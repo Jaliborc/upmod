@@ -2,14 +2,13 @@ const process = require('process')
 process.removeAllListeners('warning')
 
 const { spawnSync } = require('child_process')
+const { replaceInFile } = require('replace-in-file')
+const chalk = require('chalk-template').default
 const archiver = require('archiver')
 const klaw = require('klaw-sync')
 
 const _ = require('lodash')
 const b = require('bluebird')
-const chalk = require('chalk')
-
-const fsreplace = require('replace-in-file')
 const fs = require('fs-extra')
 const path = require('path')
 const os = require('os')
@@ -75,8 +74,8 @@ async function make(params) {
 	await fs.writeFile(logfile, log, 'utf8')
 	await b.each(files, async file => {
 		if (file.endsWith('.lua')) {
-			await fsreplace({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{${patrons}} $2`})
-			await fsreplace({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
+			await replaceInFile({files: file, from: /(local\s+\S+\s*=\s*)[^\n\r]+(\-\-\s*generated\s*patron\s*list)/g, to: `$1{${patrons}} $2`})
+			await replaceInFile({files: file, from: /(Copyright[^\n\r\t\d]+\d+\s*\-\s*)\d+/g, to: `$1${year}`})
 		} else if (file.endsWith('.toc')) {
 			let isRoot = folders.includes(path.dirname(file))
 			let interfaces = isRoot ? compatible : params.patches
@@ -84,8 +83,8 @@ async function make(params) {
 			let matches = interfaces.filter(patch => file.slice(0, -4).toLowerCase().endsWith(patch.flavor.toLowerCase()))
 			matches = matches.length > 0 ? matches : interfaces
 
-			await fsreplace({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${_.map(matches, 'toc').join(', ')}`})
-			await fsreplace({files: file, from: /(##\s*Version:\s*).*$/m, to: `$1${version}${type !== 'release' ? ' ('+type+')' : ''}`})
+			await replaceInFile({files: file, from: /(##\s*Interface:)\s*([^\n\r\t]+)/, to: `$1 ${_.map(matches, 'toc').join(', ')}`})
+			await replaceInFile({files: file, from: /(##\s*Version:\s*).*$/m, to: `$1${version}${type !== 'release' ? ' ('+type+')' : ''}`})
 		}
 	})
 
