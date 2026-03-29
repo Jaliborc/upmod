@@ -68,10 +68,10 @@ async function run() {
 		.description('display found addons')
 		.action( () => {
 			for (let install of list(config.dir)) {
-				print(chalk`{bold {green ℹ} Under ${install.name}:}\n`)
+				print`{bold {green ℹ} Under ${install.name}:}\n`
 
 				for (let mod of install.mods.sort())
-					print(chalk`❯ {cyan ${mod.name}}\n`)
+					print`❯ {cyan ${mod.name}}\n`
 			}
 		})
 
@@ -84,7 +84,7 @@ async function run() {
 			let project = find(mod)
 			if (project)
 				make(Object.assign(options, project, config))
-					.then(build => sucess(chalk`Built {cyan ${project.name}} version ${build.version}`))
+					.then(build => success`Built {cyan ${project.name}} version ${build.version}`)
 					.catch(error)
 		})
 
@@ -98,9 +98,9 @@ async function run() {
 			if (project)
 				make(Object.assign({}, config, project, options))
 					.then(build => {
-						sucess(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
+						success(chalk`Built {cyan ${project.name}} version ${build.version}\n`)
 						upload(Object.assign({}, config, project, build))
-							.then(r => sucess(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
+							.then(r => success(chalk`Uploaded {cyan ${project.name}} version ${build.version}`))
 							.catch(error)
 					})
 					.catch(error)
@@ -139,7 +139,7 @@ function find(mod) {
 	let mods = _.flatten(_.map(list(config.dir), i => i.mods))
 	let match = _.find(mods, entry => clean(entry.name) == clean(mod))
 	if (!match)
-		error(chalk`{cyan ${mod}} is not registered.`)
+		error`{cyan ${mod}} is not registered.`
 
 	return match
 }
@@ -152,16 +152,20 @@ function normalize(file) {
 	return path.normalize(file.trim().replace(/"/g, ''))
 }
 
-function sucess(txt) {
-	print(chalk`{green ✔} ${txt}`)
+function success(...text) {
+	print`{green ✔} ${colorize(...text)}`
 }
 
-function error(txt) {
-	print(chalk`{red ❯❯} ${txt}`)
+function error(...text) {
+	print`{red ❯❯} ${colorize(...text)}`
 }
 
-function print(text) {
-	process.stdout.write(replaceSymbols(text))
+function print(...text) {
+	process.stdout.write(replaceSymbols(colorize(...text)))
+}
+
+function colorize(strings, ...values) {
+	return Array.isArray(strings) ? chalk(strings, ...values) : strings
 }
 
 run()
