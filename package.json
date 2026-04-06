@@ -14,11 +14,11 @@
 		"commander": "^14.0.3",
 		"csv-parse": "^6.2.1",
 		"figures": "^6.1.0",
-		"fs-extra": "^8.1.0",
+		"fs-extra": "^11.3.3",
 		"ignore": "^7.0.5",
 		"inquirer": "^8.2.0",
 		"klaw-sync": "^7.0.0",
-		"lodash": "^4.17.21",
+		"lodash": "^4.17.23",
 		"replace-in-file": "^8.4.0"
 	}
 }
