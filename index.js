@@ -68,7 +68,10 @@ async function make(params) {
 	let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
 	let compatible = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
 
-	let files = _.flatMap(folders, folder => _.map(klaw(folder), i => i.path)).filter(file => !/\\\./g.test(file))
+	let files = _.flatMap(folders, folder => _.map(klaw(folder, {
+		nodir: true,
+		filter: item => !path.basename(item.path).startsWith('.')
+	}), i => i.path))
 	let dir = path.join(params.path, '../')
 
 	await fs.writeFile(logfile, log, 'utf8')
