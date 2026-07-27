@@ -119,7 +119,13 @@ async function make(params) {
 
 async function upload(params) {
 	const headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-	const clients = await (await fetch('https://wow.curseforge.com/api/game/versions', {headers})).json()
+	const versionsRes = await fetch('https://wow.curseforge.com/api/game/versions', {headers})
+	if (!versionsRes.ok)
+		throw chalk`CurseForge API error (${versionsRes.status}): ${versionsRes.statusText}`
+
+	const clients = await versionsRes.json()
+	if (!Array.isArray(clients))
+		throw chalk`Unexpected response format from CurseForge API`
 
 	const compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
 	if (compatible.length < params.patches.length)
@@ -135,8 +141,12 @@ async function upload(params) {
 		changelogType: 'markdown',
 	}))
 
-	const published = await (await fetch(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })).json()
-	if (published)
+	const uploadRes = await fetch(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
+	if (!uploadRes.ok)
+		throw chalk`Failed to upload file to CurseForge (${uploadRes.status}): ${uploadRes.statusText}`
+
+	const published = await uploadRes.json()
+	if (published && published.id)
 		commitChanges(params.path, params.version)
 
 	return published
