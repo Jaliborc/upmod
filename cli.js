@@ -145,7 +145,7 @@ function find(mod) {
 }
 
 function clean(mod) {
-	return mod.replace('-', '').replace('_', '').toLowerCase()
+	return mod.replace(/[-_]/g, '').toLowerCase()
 }
 
 function normalize(file) {
