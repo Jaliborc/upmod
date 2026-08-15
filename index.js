@@ -173,11 +173,8 @@ function commitSubmodules(folders, message) {
 function commitChanges(repo, message) {
 	let status = spawnSync('git', ['status', '--porcelain'], {cwd: repo, encoding: 'utf8'})
 	if (status?.stdout?.trim().length > 0) {
-		console.log('add')
 		spawnSync('git', ['add', '.'], {cwd: repo})
-		console.log('commit')
 		spawnSync('git', ['commit', '-m', message], {cwd: repo, stdio: 'inherit'})
-		console.log('push')
 		spawnSync('git', ['push', 'origin'], {cwd: repo, stdio: 'inherit'})
 	}
 }
