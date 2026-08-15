@@ -69,10 +69,7 @@ async function make(params) {
 	let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
 	let compatible = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
 
-	let files = _.flatMap(folders, folder => _.map(klaw(folder, {
-		nodir: true,
-		filter: item => !path.basename(item.path).startsWith('.')
-	}), i => i.path))
+	let files = _.flatMap(folders, folder => _.map(klaw(folder, {nodir: true, filter: i => !path.basename(i.path).startsWith('.')}), i => i.path))
 	let dir = path.join(params.path, '../')
 
 	await fs.writeFile(logfile, log, 'utf8')
@@ -122,16 +119,16 @@ async function make(params) {
 }
 
 async function upload(params) {
-	const headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-	const clients = await fetchJson('https://wow.curseforge.com/api/game/versions', { headers })
+	let headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
+	let clients = await fetchJson('https://wow.curseforge.com/api/game/versions', { headers })
 	if (!(clients instanceof Array))
 		throw chalk`CurseForge API error${clients?.status ? ` (${clients.status})` : ''}: {red ${clients?.statusText || 'Unexpected format'}}`
 
-	const compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
+	let compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
 	if (compatible.length < params.patches.length)
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-	const body = new FormData()
+	let body = new FormData()
 	body.append('file', await fs.openAsBlob(params.file), params.file)
 	body.append('metadata', JSON.stringify({
 		gameVersions: _.map(compatible, 'id'),
@@ -141,7 +138,7 @@ async function upload(params) {
 		changelogType: 'markdown',
 	}))
 
-	const published = await fetchJson(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
+	let published = await fetchJson(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
 	if (published instanceof Response)
 		throw chalk`Failed to upload file to CurseForge (${published.status}): {red ${published.statusText}}`
 	else if (published?.id)
