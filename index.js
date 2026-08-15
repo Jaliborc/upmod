@@ -206,16 +206,16 @@ function readconfig(path) {
 		let key
 
 		for (let line of text.split('\n')) {
-		let v = line.match(/^\s*\[(\w+)\]\s*$/)
-		if (v) {
-			key = v[1]
-			data[key] = []
-		} else if (key) {
-			let trimmed = line.trim()
-			if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith(';')) {
-				data[key].push(trimmed)
+			let v = line.match(/^\s*\[(\w+)\]\s*$/)
+			if (v) {
+				key = v[1]
+				data[key] = []
+			} else if (key) {
+				let trimmed = line.trim()
+				if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith(';')) {
+					data[key].push(trimmed)
+				}
 			}
-		}
 		}
 	}
 
