@@ -175,13 +175,13 @@ function commitChanges(repo, message) {
 	if (status?.stdout?.trim().length > 0) {
 		spawnSync('git', ['add', '.'], {cwd: repo})
 		spawnSync('git', ['commit', '-m', message], {cwd: repo, stdio: 'inherit'})
-		console.log('push')
+
 		let push = spawnSync('git', ['push', 'origin'], {cwd: repo, stdio: 'inherit'})
 		if (push.status !== 0) {
 			let head = spawnSync('git', ['symbolic-ref', '-q', 'HEAD'], {cwd: repo, encoding: 'utf8'})
-			if (head.status !== 0)
-				console.log(chalk`{yellow Warning: ${repo} is on a detached HEAD. Check out a branch before building.}`)
-			throw chalk`Failed to push {red ${repo}} to remote origin`
+			throw chalk`${head.status !== 0 
+				? `{red ${repo}} is on a detached HEAD. Fix branch before publishing` 
+				: `Failed to push {red ${repo}} to remote origin`}`
 		}
 	}
 }
