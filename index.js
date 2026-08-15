@@ -120,13 +120,9 @@ async function make(params) {
 
 async function upload(params) {
 	const headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-	const versionsRes = await fetch('https://wow.curseforge.com/api/game/versions', {headers})
-	if (!versionsRes.ok)
-		throw chalk`CurseForge API error (${versionsRes.status}): ${versionsRes.statusText}`
-
-	const clients = await versionsRes.json()
-	if (!Array.isArray(clients))
-		throw chalk`Unexpected response format from CurseForge API`
+	const clients = await fetchJson('https://wow.curseforge.com/api/game/versions', { headers })
+	if (!(clients instanceof Array))
+		throw chalk`CurseForge API error${clients?.status ? ` (${clients.status})` : ''}: {red ${clients?.statusText || 'Unexpected format'}}`
 
 	const compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
 	if (compatible.length < params.patches.length)
@@ -142,12 +138,10 @@ async function upload(params) {
 		changelogType: 'markdown',
 	}))
 
-	const uploadRes = await fetch(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
-	if (!uploadRes.ok)
-		throw chalk`Failed to upload file to CurseForge (${uploadRes.status}): ${uploadRes.statusText}`
-
-	const published = await uploadRes.json()
-	if (published && published.id)
+	const published = await fetchJson(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
+	if (published instanceof Response)
+		throw chalk`Failed to upload file to CurseForge (${published.status}): {red ${published.statusText}}`
+	else if (published?.id)
 		commitChanges(params.path, params.version)
 
 	return published
@@ -238,6 +232,10 @@ function parsePatron(entry) {
 
 function parseDollars(entry, key) {
 	entry[key] = parseInt(entry[key + ' Amount'].match(/\d+/)[0])
+}
+
+function fetchJson(url, options) {
+	return fetch(url, options).then(r => r.ok ? r.json() : r)
 }
 
 module.exports = { list, make, upload }
