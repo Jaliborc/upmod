@@ -151,7 +151,7 @@ function updateSubmodules(folders) {
 			if (pull.status !== 0)
 				throw chalk`Failed to pull {red ${folder}} from remote`
 
-			let update = spawnSync('git', ['submodule', 'update', '--remote', '--init', '--recursive'], {cwd: folder, stdio: 'inherit'})
+			let update = spawnSync('git', ['submodule', 'update', '--remote', '--merge', '--init', '--recursive'], {cwd: folder, stdio: 'inherit'})
 			if (update.status !== 0)
 				throw chalk`Failed to update submodule in {red ${folder}}`
 		}
