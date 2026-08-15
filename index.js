@@ -33,7 +33,8 @@ async function make(params) {
 	if (!upconfig)
 		throw chalk`No {red .upconfig} found`
 
-	let folders = _.concat(_.map(upconfig.modules || [], m => path.join(params.path, '../', m)), params.path)
+	let modules = (upconfig.modules || []).filter(Boolean)
+	let folders = _.concat(_.map(modules, m => path.join(params.path, '../', m)), params.path)
 	for (var folder of folders)
 		if (!exists(folder))
 			throw chalk`Missing a required module at {red ${folder}}`
@@ -68,7 +69,7 @@ async function make(params) {
 	let incompatible = upconfig.incompatible?.filter(v => v.length > 0).map(v => `^${v.replace(/x/g, '\\d+')}$`) || []
 	let compatible = params.patches.filter(p => !_.some(incompatible, i => p.name.match(i)))
 
-	let files = _.flatMap(folders, folder => _.map(klaw(folder), i => i.path)).filter(file => !/\\\./g.test(file))
+	let files = _.flatMap(folders, folder => _.map(klaw(folder, {nodir: true, filter: i => !path.basename(i.path).startsWith('.')}), i => i.path))
 	let dir = path.join(params.path, '../')
 
 	await fs.writeFile(logfile, log, 'utf8')
@@ -93,7 +94,7 @@ async function make(params) {
 
 	let zip = archiver('zip')
 	let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
-	let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
+	let ignore = require('ignore')().add(upconfig.ignore?.join('\n') || '')
 
 	await zip.pipe(fs.createWriteStream(out))
 	await b.each(files, async file => {
@@ -118,14 +119,16 @@ async function make(params) {
 }
 
 async function upload(params) {
-	const headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
-	const clients = await (await fetch('https://wow.curseforge.com/api/game/versions', {headers})).json()
+	let headers = {'User-Agent': 'UpMod/2.0.0', 'X-Api-Token': params.curse}
+	let clients = await fetchJson('https://wow.curseforge.com/api/game/versions', { headers })
+	if (!(clients instanceof Array))
+		throw chalk`CurseForge API error${clients?.status ? ` (${clients.status})` : ''}: {red ${clients?.statusText || 'Unexpected format'}}`
 
-	const compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
+	let compatible = _.filter(clients, c => _.some(params.patches || [], p => p.name == c.name))
 	if (compatible.length < params.patches.length)
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
-	const body = new FormData()
+	let body = new FormData()
 	body.append('file', await fs.openAsBlob(params.file), params.file)
 	body.append('metadata', JSON.stringify({
 		gameVersions: _.map(compatible, 'id'),
@@ -135,8 +138,10 @@ async function upload(params) {
 		changelogType: 'markdown',
 	}))
 
-	const published = await (await fetch(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })).json()
-	if (published)
+	let published = await fetchJson(`https://wow.curseforge.com/api/projects/${params.project}/upload-file`, { method: 'POST', headers, body })
+	if (published instanceof Response)
+		throw chalk`Failed to upload file to CurseForge (${published.status}): {red ${published.statusText}}`
+	else if (published?.id)
 		commitChanges(params.path, params.version)
 
 	return published
@@ -151,7 +156,7 @@ function updateSubmodules(folders) {
 			if (pull.status !== 0)
 				throw chalk`Failed to pull {red ${folder}} from remote`
 
-			let update = spawnSync('git', ['submodule', 'update', '--remote', '--init', '--recursive'], {cwd: folder, stdio: 'inherit'})
+			let update = spawnSync('git', ['submodule', 'update', '--remote', '--merge', '--init', '--recursive'], {cwd: folder, stdio: 'inherit'})
 			if (update.status !== 0)
 				throw chalk`Failed to update submodule in {red ${folder}}`
 		}
@@ -168,9 +173,7 @@ function commitSubmodules(folders, message) {
 function commitChanges(repo, message) {
 	let status = spawnSync('git', ['status', '--porcelain'], {cwd: repo, encoding: 'utf8'})
 	if (status?.stdout?.trim().length > 0) {
-		console.log('add')
 		spawnSync('git', ['add', '.'], {cwd: repo})
-		console.log('commit')
 		spawnSync('git', ['commit', '-m', message], {cwd: repo, stdio: 'inherit'})
 		console.log('push')
 		let push = spawnSync('git', ['push', 'origin'], {cwd: repo, stdio: 'inherit'})
@@ -201,13 +204,13 @@ function readconfig(path) {
 		let key
 
 		for (let line of text.split('\n')) {
-		let v = line.match(/^\s*\[(\w+)\]\s*$/)
-		if (v) {
-			key = v[1]
-			data[key] = []
-		} else if (key) {
-			data[key].push(line.trim())
-		}
+			let v = line.match(/^\s*\[(\w+)\]\s*$/)
+			if (v) {
+				key = v[1]
+				data[key] = []
+			} else if (key && line.trim().match(/^[^#;\s]/)) {
+				data[key].push(line.trim())
+			}
 		}
 	}
 
@@ -233,6 +236,10 @@ function parsePatron(entry) {
 
 function parseDollars(entry, key) {
 	entry[key] = parseInt(entry[key + ' Amount'].match(/\d+/)[0])
+}
+
+function fetchJson(url, options) {
+	return fetch(url, options).then(r => r.ok ? r.json() : r)
 }
 
 module.exports = { list, make, upload }
