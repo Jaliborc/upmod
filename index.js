@@ -33,7 +33,8 @@ async function make(params) {
 	if (!upconfig)
 		throw chalk`No {red .upconfig} found`
 
-	let folders = _.concat(_.map(upconfig.modules || [], m => path.join(params.path, '../', m)), params.path)
+	let modules = (upconfig.modules || []).filter(Boolean)
+	let folders = _.concat(_.map(modules, m => path.join(params.path, '../', m)), params.path)
 	for (var folder of folders)
 		if (!exists(folder))
 			throw chalk`Missing a required module at {red ${folder}}`
@@ -200,7 +201,10 @@ function readconfig(path) {
 			key = v[1]
 			data[key] = []
 		} else if (key) {
-			data[key].push(line.trim())
+			let trimmed = line.trim()
+			if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith(';')) {
+				data[key].push(trimmed)
+			}
 		}
 		}
 	}
