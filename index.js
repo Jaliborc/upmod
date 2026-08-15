@@ -93,7 +93,7 @@ async function make(params) {
 
 	let zip = archiver('zip')
 	let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
-	let ignore = require('ignore')().add(upconfig.ignore && upconfig.ignore.join('\n'))
+	let ignore = require('ignore')().add(upconfig.ignore?.join('\n') || '')
 
 	await zip.pipe(fs.createWriteStream(out))
 	await b.each(files, async file => {
