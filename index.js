@@ -210,11 +210,8 @@ function readconfig(path) {
 			if (v) {
 				key = v[1]
 				data[key] = []
-			} else if (key) {
-				let trimmed = line.trim()
-				if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith(';')) {
-					data[key].push(trimmed)
-				}
+			} else if (key && line.trim().match(/^[^#;\s]/)) {
+				data[key].push(line.trim())
 			}
 		}
 	}
