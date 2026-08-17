@@ -42,7 +42,7 @@ const settings = _.map([
 	{
 		name: 'patrons',
 		message: 'Patron list .csv file',
-		filter: file => csv(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true}),
+		filter: file => csv.parse(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true}),
 		transformer: patrons => typeof(patrons) != 'string' && _.has(patrons, 'length') && `${patrons.length} Patrons` || patrons,
 		validate: patrons => patrons.length > 0 || 'Not a valid .csv file',
 		optional: true,
