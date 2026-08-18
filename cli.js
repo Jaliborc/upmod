@@ -27,10 +27,10 @@ const settings = _.map([
 	{
 		name: 'patches',
 		message: 'Supported game patch and toc number pairs',
-		filter: patches => _.map(patches.split(','), p => {
+		filter: patches => typeof patches === 'string' ? _.map(patches.split(','), p => {
 			let pattern = p.trim().match(/^(\w+)[\/\\](\d+\.\d+\.\d+)[\/\\](\d+)$/)
 			return pattern && {flavor: pattern[1], name: pattern[2], toc: pattern[3]}
-		}),
+		}) : patches,
 		transformer: patches => typeof(patches) != 'string' && _.every(patches) && _.map(patches, p => p.flavor + '/' + p.name + '/' + p.toc).join(', ') || patches,
 		validate: patches => _.every(patches) || 'Not in Flavor/X.X.X/TOC, Flavor/X.X.X/TOC format',
 	},
@@ -42,12 +42,18 @@ const settings = _.map([
 	{
 		name: 'patrons',
 		message: 'Patron list .csv file',
-		filter: file => csv.parse(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true}),
-		transformer: patrons => typeof(patrons) != 'string' && _.has(patrons, 'length') && `${patrons.length} Patrons` || patrons,
-		validate: patrons => patrons.length > 0 || 'Not a valid .csv file',
+		filter: file => {
+			if (typeof file !== 'string') return file
+			if (config.patrons && file === `${config.patrons.length} Patrons`) return config.patrons
+			let rows = csv.parse(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true})
+			config._patrons_file = file
+			return rows
+		},
+		transformer: patrons => typeof patrons === 'string' ? patrons : (config._patrons_file || (patrons?.length ? `${patrons.length} Patrons` : patrons)),
+		validate: patrons => (typeof patrons === 'string' ? true : patrons.length > 0) || 'Not a valid .csv file',
 		optional: true,
 	},
-], s => Object.assign({type: 'input', filter: v => v.trim(), transformer: v => v}, s))
+], s => Object.assign({type: 'input', filter: v => typeof v === 'string' ? v.trim() : v, transformer: v => v}, s))
 
 
 /* CLI */
@@ -124,7 +130,13 @@ async function configuration() {
 }
 
 async function configure(what) {
-	Object.assign(config, await inquirer.prompt(_.filter(settings, what)))
+	let questions = _.map(_.filter(settings, what), s => {
+		let current = config[s.name]
+		let defaultValue = typeof current === 'string' ? current : (s.transformer ? s.transformer(current) : undefined)
+		return Object.assign({}, s, { default: defaultValue })
+	})
+
+	Object.assign(config, await inquirer.prompt(questions))
 	await save()
 }
 
