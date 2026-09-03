@@ -3,9 +3,12 @@
 	"description": "World of Warcraft addon build and upload tool",
 	"author": "Joao Cardoso",
 	"version": "2.4.0",
-	"main": "cli.js",
+	"main": "index.js",
 	"bin": {
 		"upmod": "cli.js"
+	},
+	"scripts": {
+		"start": "node cli.js"
 	},
 	"dependencies": {
 		"archiver": "^7.0.1",

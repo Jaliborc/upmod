@@ -90,7 +90,7 @@ async function make(params) {
 	})
 
 	if (!params.stay)
-		commitSubmodules(folders, 'Automated year/interface number update')
+		commitSubmodules(folders, 'Automated year or interface number update')
 
 	let zip = archiver('zip')
 	let out = path.join(os.homedir(), 'Desktop', `${params.name}-${version}.zip`)
