@@ -129,7 +129,7 @@ async function upload(params) {
 		throw chalk`Only ${compatible.length} compatible WoW patches found`
 
 	let body = new FormData()
-	body.append('file', await fs.openAsBlob(params.file), params.file)
+	body.append('file', await fs.openAsBlob(params.file), path.basename(params.file))
 	body.append('metadata', JSON.stringify({
 		gameVersions: _.map(compatible, 'id'),
 		displayName: params.version,
