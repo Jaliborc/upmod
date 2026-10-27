@@ -42,9 +42,9 @@ const settings = _.map([
 	{
 		name: 'patrons',
 		message: 'Patron list .csv file',
-		filter: file => csv.parse(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true}),
+		filter: file => (!file.trim() || file == `${config.patrons?.length} Patrons`) ? config.patrons : csv.parse(fs.readFileSync(normalize(file), 'utf8'), {delimiter: ',', columns: true}),
 		transformer: patrons => typeof(patrons) != 'string' && _.has(patrons, 'length') && `${patrons.length} Patrons` || patrons,
-		validate: patrons => patrons.length > 0 || 'Not a valid .csv file',
+		validate: patrons => !patrons || patrons.length > 0 || 'Not a valid .csv file',
 		optional: true,
 	},
 ], s => Object.assign({type: 'input', filter: v => v.trim(), transformer: v => v}, s))
@@ -124,7 +124,8 @@ async function configuration() {
 }
 
 async function configure(what) {
-	Object.assign(config, await inquirer.prompt(_.filter(settings, what)))
+	let questions = _.map(_.filter(settings, what), s => Object.assign({default: s.transformer(config[s.name])}, s))
+	Object.assign(config, await inquirer.prompt(questions))
 	await save()
 }
 
